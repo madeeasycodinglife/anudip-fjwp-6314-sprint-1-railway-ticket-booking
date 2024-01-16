@@ -49,6 +49,12 @@ public class UserServiceApplication {
         SpringApplication.run(UserServiceApplication.class, args);
     }
 
+
+    /**
+     * here i have allowed all origins, methods and headers but when it will be deployed then it must have to
+     * restricted for a particular origin.
+     * @return
+     */
     @Bean
     public WebMvcConfigurer corsConfiguration() {
         return new WebMvcConfigurer() {

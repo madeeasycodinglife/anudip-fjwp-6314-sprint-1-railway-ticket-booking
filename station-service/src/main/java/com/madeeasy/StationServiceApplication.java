@@ -31,5 +31,6 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 public class StationServiceApplication {
     public static void main(String[] args) {
         SpringApplication.run(StationServiceApplication.class, args);
+        System.out.println();
     }
 }

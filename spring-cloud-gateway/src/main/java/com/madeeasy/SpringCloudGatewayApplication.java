@@ -9,5 +9,6 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 public class SpringCloudGatewayApplication {
     public static void main(String[] args) {
         SpringApplication.run(SpringCloudGatewayApplication.class, args);
+        System.out.println();
     }
 }
