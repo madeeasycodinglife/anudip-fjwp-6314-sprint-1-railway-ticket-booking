@@ -28,6 +28,9 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
                 summary = "Manage station , platform information for a railway system."
         )
 )
+/**
+ * This service is temporarily closed.
+ */
 public class StationServiceApplication {
     public static void main(String[] args) {
         SpringApplication.run(StationServiceApplication.class, args);
