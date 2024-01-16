@@ -21,7 +21,7 @@ public class StationServiceController {
 
 
     /**
-     * This service is temporarily closed . In the future, it will be expanded with more features
+     * This service is temporarily closed . In the future, it will be expanded with more features.
      */
 
     private final StationService stationService;
