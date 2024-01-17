@@ -170,6 +170,7 @@ public class TrainController {
     @SecurityRequirement(
             name = "Bearer Authentication"
     )
+    @Hidden
     public ResponseEntity<List<TrainResponseDTO>> searchTrains(
             @Parameter(description = "Source of the station to be searched", required = true)
             @PathVariable("source") String sourceStation,
@@ -201,7 +202,12 @@ public class TrainController {
         trainService.deleteTrain(trainId);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
-
+    
+    @Operation(
+            summary = "search trains",
+            description = "Search trains",
+            tags = {"Search trains by source and destination"}
+    )
     @GetMapping("/trains/{source}/{destination}")
     public List<TrainResponseDTO> getTrainsBySourceAndDestination(
             @PathVariable("source") String source,
