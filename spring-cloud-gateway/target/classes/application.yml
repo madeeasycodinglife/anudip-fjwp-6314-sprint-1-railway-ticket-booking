@@ -1,0 +1,106 @@
+server:
+  port: 8080
+
+
+
+spring:
+  application:
+    name: spring-cloud-gateway
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins: "*"
+            allowed-methods: "*"
+            allowed-headers: "*"
+      discovery:
+        locator:
+          enabled: true
+
+      routes:
+
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/user-service/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: user-service-circuit-breaker
+                fallbackUri: forward:/fallback/user-service-fallback
+
+
+        - id: ticket-service
+          uri: lb://TICKET-SERVICE
+          predicates:
+            - Path=/ticket-service/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: ticket-service-circuit-breaker
+                fallbackUri: forward:/fallback/ticket-service-fallback
+
+
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/auth-service/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: auth-service-circuit-breaker
+                fallbackUri: forward:/fallback/auth-service-fallback
+
+        - id: train-service
+          uri: lb://train-service
+          predicates:
+            - Path=/train-service/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: train-service-circuit-breaker
+                fallbackUri: forward:/fallback/train-service-fallback
+        - id: station-service
+          uri: lb://station-service
+          predicates:
+            - Path=/station-service/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: station-service-circuit-breaker
+                fallbackUri: forward:/fallback/station-service-fallback
+
+
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 2
+    lease-expiration-duration-in-seconds: 3
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+
+
+springdoc:
+  swagger-ui:
+    url: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+
+
+
+
+
+
