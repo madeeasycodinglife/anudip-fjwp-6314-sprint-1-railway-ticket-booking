@@ -34,11 +34,6 @@ public class Ticket {
     @Column(length = 10)
     private String coach;
 
-    @Column(length = 30)
-    private int staringSeatNumber;
-
-    @Column(length = 30)
-    private int endingSeatNumber;
 
     @Column(length = 30)
     private String trainNumber;

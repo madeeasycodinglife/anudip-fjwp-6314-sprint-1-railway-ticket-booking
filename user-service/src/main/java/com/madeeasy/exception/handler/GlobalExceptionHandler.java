@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -20,5 +21,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         Map<String, Object> errorResponse = Map.of(exception.getMessage(), HttpStatus.NOT_FOUND);
         log.info("inside ProductNotFoundException handler: {}", errorResponse);
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+    // SQLIntegrityConstraintViolationException
+    @ExceptionHandler(SQLIntegrityConstraintViolationException.class)
+    public ResponseEntity<?> handleSQLIntegrityConstraintViolationException(SQLIntegrityConstraintViolationException exception) {
+        Map<String, Object> errorResponse = Map.of(exception.getMessage(), HttpStatus.CONFLICT);
+        log.info("inside SQLIntegrityConstraintViolationException handler: {}", errorResponse);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
 }

@@ -9,4 +9,6 @@ public interface TicketService {
     ResponseEntity<?> getAllTicketsByTrainNumber(String trainNumber);
 
     ResponseEntity<?> checkTicketsStatusByPnrNumber(String pnrNumber);
+
+    ResponseEntity<?> cancelTicketsByPnrNumber(String pnrNumber);
 }

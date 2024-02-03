@@ -1,5 +1,6 @@
 package com.madeeasy.controller;
 
+import com.madeeasy.dto.request.TicketCancellationRequestDTO;
 import com.madeeasy.dto.request.TicketRequestDTO;
 import com.madeeasy.service.TicketService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,6 +35,23 @@ public class TicketServiceController {
             @PathVariable("number-of-tickets") @Min(value = 1) int numberOfTickets,
             @RequestBody TicketRequestDTO ticketRequestDTO) {
         return this.ticketService.bookNextAvailableSeats(numberOfTickets, ticketRequestDTO);
+    }
+
+    // cancel tickets
+    @Operation(
+            summary = "Cancel tickets",
+            description = "Cancel tickets",
+            tags = {"Cancel Tickets"}
+    )
+    @SecurityRequirement(
+            name = "Bearer Authentication"
+    )
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @DeleteMapping("/cancel/tickets/{pnr-number}/{no-of-tickets}")
+    public ResponseEntity<?> cancelTicketsByPnrNumber(
+            @PathVariable("pnr-number") String pnrNumber
+    ) {
+        return this.ticketService.cancelTicketsByPnrNumber(pnrNumber);
     }
 
     @Operation(
