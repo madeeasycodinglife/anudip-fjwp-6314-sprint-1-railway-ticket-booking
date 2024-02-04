@@ -62,10 +62,9 @@ public class TicketServiceController {
     @SecurityRequirement(
             name = "Bearer Authentication"
     )
-    @PreAuthorize("hasRole('USER') and hasRole('ADMIN')")
-    @GetMapping("/get-all/by/train-number/{train-number}")
-    public ResponseEntity<?> getAllTicketsByTrainNumber(
-            @PathVariable("train-number") String trainNumber) {
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @GetMapping("/get-all/by/train-number/{trainNumber}")
+    public ResponseEntity<?> getAllTicketsByTrainNumber(@PathVariable("trainNumber") String trainNumber) {
         return this.ticketService.getAllTicketsByTrainNumber(trainNumber);
     }
 

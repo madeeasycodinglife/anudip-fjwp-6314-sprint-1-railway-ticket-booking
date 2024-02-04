@@ -29,6 +29,7 @@ public class SecurityConfiguration {
         return http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(
                         authorizeRequests -> authorizeRequests.requestMatchers("/ticket-service/v3/api-docs").permitAll()
+//                                .requestMatchers("ticket-service/get-all/by/train-number/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

@@ -24,6 +24,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @RequiredArgsConstructor
@@ -65,13 +66,13 @@ public class TicketServiceImpl implements TicketService {
 
                         if (availableSeats.get("S1") > 0) {
 
-                            if (availableSeats.get("S1") == 1 || availableSeats.get("S2") >= 1 || availableSeats.get("S3") >= 1) {
+                            if (availableSeats.get("S1") >= 1 || availableSeats.get("S2") >= 1 || availableSeats.get("S3") >= 1) {
 
                                 Map<String, Integer> newAvailableSeats = availableSeats;
                                 AtomicBoolean isBooked = new AtomicBoolean(false);
                                 ticketRequestDTO.getPassengers()
                                         .forEach(passenger -> {
-                                            if (newAvailableSeats.get("S1") == 1) {
+                                            if (newAvailableSeats.get("S1") >= 1) {
                                                 try {
                                                     bookSeatSequentially(
                                                             ticketRequestDTO.getSeatClass(),
@@ -100,7 +101,7 @@ public class TicketServiceImpl implements TicketService {
                                                         String.class,
                                                         uriVariables
                                                 );
-                                                newAvailableSeats.put("S1", 0);
+                                                newAvailableSeats.put("S1", availableSeats.get("S1") - 1);
                                             } else if (newAvailableSeats.get("S2") >= 1) {
 
                                                 try {
@@ -172,13 +173,14 @@ public class TicketServiceImpl implements TicketService {
                                                             passenger,
                                                             "S3",
                                                             TICKET_WAITING);
+                                                    isBooked.set(false);
                                                 } catch (ParseException e) {
                                                     throw new RuntimeException(e);
                                                 }
                                                 System.out.println("run count : ");
                                             }
                                         });
-                                if (!isBooked.get())
+                                if (isBooked.get())
                                     return ResponseEntity.status(HttpStatus.OK).body("Seats booked successfully.");
                                 else
                                     return ResponseEntity.status(HttpStatus.ACCEPTED).body("Some seats are confirmed and some are waiting !!");
@@ -261,6 +263,7 @@ public class TicketServiceImpl implements TicketService {
                                                         passenger,
                                                         "S3",
                                                         TICKET_WAITING);
+                                                isBooked.set(false);
                                             } catch (ParseException e) {
                                                 throw new RuntimeException(e);
                                             }
@@ -268,7 +271,7 @@ public class TicketServiceImpl implements TicketService {
                                         }
 
                                     });
-                            if (!isBooked.get())
+                            if (isBooked.get())
                                 return ResponseEntity.status(HttpStatus.OK).body("Seats booked successfully.");
                             else
                                 return ResponseEntity.status(HttpStatus.ACCEPTED).body("Some seats are confirmed and some are waiting !!");
@@ -321,23 +324,33 @@ public class TicketServiceImpl implements TicketService {
                                                         passenger,
                                                         "S3",
                                                         TICKET_WAITING);
+                                                isBooked.set(false);
                                             } catch (ParseException e) {
                                                 throw new RuntimeException(e);
                                             }
                                         }
                                     });
-                            if (!isBooked.get())
+                            if (isBooked.get())
                                 return ResponseEntity.status(HttpStatus.OK).body("Seats booked successfully.");
                             else
                                 return ResponseEntity.status(HttpStatus.ACCEPTED).body("Some seats are confirmed and some are waiting !!");
                         } else {
                             // handle waiting tickets
-                            bookSeatSequentially(
-                                    ticketRequestDTO.getSeatClass(),
-                                    numberOfTickets,
-                                    ticketRequestDTO,
-                                    "S3",
-                                    TICKET_WAITING);
+                            ticketRequestDTO.getPassengers()
+                                    .forEach(passenger->{
+                                        try {
+                                            bookSeatSequentially(
+                                                    ticketRequestDTO.getSeatClass(),
+                                                    1,
+                                                    ticketRequestDTO,
+                                                    passenger,
+                                                    "S3",
+                                                    TICKET_WAITING);
+                                        } catch (ParseException e) {
+                                            throw new RuntimeException(e);
+                                        }
+                                    });
+
                             if (numberOfTickets == 1) {
                                 return ResponseEntity.status(HttpStatus.ACCEPTED).body("Your seat is in waiting state !!");
                             }
@@ -347,13 +360,13 @@ public class TicketServiceImpl implements TicketService {
 
                         if (availableSeats.get("D1") > 0) {
 
-                            if (availableSeats.get("D1") == 1 || availableSeats.get("D2") >= 1 || availableSeats.get("D3") >= 1) {
+                            if (availableSeats.get("D1") >= 1 || availableSeats.get("D2") >= 1 || availableSeats.get("D3") >= 1) {
 
                                 Map<String, Integer> newAvailableSeats = availableSeats;
                                 AtomicBoolean isBooked = new AtomicBoolean(false);
                                 ticketRequestDTO.getPassengers()
                                         .forEach(passenger -> {
-                                            if (newAvailableSeats.get("D1") == 1) {
+                                            if (newAvailableSeats.get("D1") >= 1) {
                                                 try {
                                                     bookSeatSequentially(
                                                             ticketRequestDTO.getSeatClass(),
@@ -382,7 +395,7 @@ public class TicketServiceImpl implements TicketService {
                                                         String.class,
                                                         uriVariables
                                                 );
-                                                newAvailableSeats.put("D1", 0);
+                                                newAvailableSeats.put("D1", availableSeats.get("D1") - 1);
                                             } else if (newAvailableSeats.get("D2") >= 1) {
 
                                                 try {
@@ -614,12 +627,27 @@ public class TicketServiceImpl implements TicketService {
                                 return ResponseEntity.status(HttpStatus.ACCEPTED).body("Some seats are confirmed and some are waiting !!");
                         } else {
                             // handle waiting tickets
-                            bookSeatSequentially(
-                                    ticketRequestDTO.getSeatClass(),
-                                    numberOfTickets,
-                                    ticketRequestDTO,
-                                    "D3",
-                                    TICKET_WAITING);
+
+                            ticketRequestDTO.getPassengers()
+                                            .forEach(passenger->{
+                                                try {
+                                                    bookSeatSequentially(
+                                                            ticketRequestDTO.getSeatClass(),
+                                                            1,
+                                                            ticketRequestDTO,
+                                                            passenger,
+                                                            "D3",
+                                                            TICKET_WAITING);
+                                                } catch (ParseException e) {
+                                                    throw new RuntimeException(e);
+                                                }
+                                            });
+//                            bookSeatSequentially(
+//                                    ticketRequestDTO.getSeatClass(),
+//                                    numberOfTickets,
+//                                    ticketRequestDTO,
+//                                    "D3",
+//                                    TICKET_WAITING);
                             if (numberOfTickets == 1) {
                                 return ResponseEntity.status(HttpStatus.ACCEPTED).body("Your seat is in waiting state !!");
                             }
@@ -629,13 +657,13 @@ public class TicketServiceImpl implements TicketService {
                     } else {
                         if (availableSeats.get("AC1") > 0) {
 
-                            if (availableSeats.get("AC1") == 1 || availableSeats.get("AC2") >= 1 || availableSeats.get("AC3") >= 1) {
+                            if (availableSeats.get("AC1") >= 1 || availableSeats.get("AC2") >= 1 || availableSeats.get("AC3") >= 1) {
 
                                 Map<String, Integer> newAvailableSeats = availableSeats;
                                 AtomicBoolean isBooked = new AtomicBoolean(false);
                                 ticketRequestDTO.getPassengers()
                                         .forEach(passenger -> {
-                                            if (newAvailableSeats.get("AC1") == 1) {
+                                            if (newAvailableSeats.get("AC1") >= 1) {
                                                 try {
                                                     bookSeatSequentially(
                                                             ticketRequestDTO.getSeatClass(),
@@ -664,7 +692,7 @@ public class TicketServiceImpl implements TicketService {
                                                         String.class,
                                                         uriVariables
                                                 );
-                                                newAvailableSeats.put("AC1", 0);
+                                                newAvailableSeats.put("AC1", availableSeats.get("AC1") - 1);
                                             } else if (newAvailableSeats.get("AC2") >= 1) {
 
                                                 try {
@@ -742,7 +770,7 @@ public class TicketServiceImpl implements TicketService {
                                                 System.out.println("run count : ");
                                             }
                                         });
-                                if (!isBooked.get())
+                                if (isBooked.get())
                                     return ResponseEntity.status(HttpStatus.OK).body("Seats booked successfully.");
                                 else
                                     return ResponseEntity.status(HttpStatus.ACCEPTED).body("Some seats are confirmed and some are waiting !!");
@@ -825,14 +853,14 @@ public class TicketServiceImpl implements TicketService {
                                                         passenger,
                                                         "AC3",
                                                         TICKET_WAITING);
+                                                isBooked.set(false);
                                             } catch (ParseException e) {
                                                 throw new RuntimeException(e);
                                             }
                                             System.out.println("run count : ");
                                         }
-
                                     });
-                            if (!isBooked.get())
+                            if (isBooked.get())
                                 return ResponseEntity.status(HttpStatus.OK).body("Seats booked successfully.");
                             else
                                 return ResponseEntity.status(HttpStatus.ACCEPTED).body("Some seats are confirmed and some are waiting !!");
@@ -896,12 +924,21 @@ public class TicketServiceImpl implements TicketService {
                                 return ResponseEntity.status(HttpStatus.ACCEPTED).body("Some seats are confirmed and some are waiting !!");
                         } else {
                             // handle waiting tickets
-                            bookSeatSequentially(
-                                    ticketRequestDTO.getSeatClass(),
-                                    numberOfTickets,
-                                    ticketRequestDTO,
-                                    "AC3",
-                                    TICKET_WAITING);
+                            ticketRequestDTO.getPassengers()
+                                            .forEach(passenger ->{
+                                                try {
+                                                    bookSeatSequentially(
+                                                            ticketRequestDTO.getSeatClass(),
+                                                            1,
+                                                            ticketRequestDTO,
+                                                            passenger,
+                                                            "AC3",
+                                                            TICKET_WAITING);
+                                                } catch (ParseException e) {
+                                                    throw new RuntimeException(e);
+                                                }
+                                            });
+
                             if (numberOfTickets == 1) {
                                 return ResponseEntity.status(HttpStatus.ACCEPTED).body("Your seat is in waiting state !!");
                             }
@@ -1201,170 +1238,6 @@ public class TicketServiceImpl implements TicketService {
 
         }
         System.out.println(seatClass + " " + numberOfTickets + " " + ticketRequestDTO + " " + passenger + " " + coach + " " + status);
-    }
-
-
-    /**
-     * Method to book tickets sequentially
-     */
-
-    private void bookSeatSequentially(String seatClass,
-                                      int numberOfTickets,
-                                      TicketRequestDTO ticketRequestDTO,
-                                      String coach,
-                                      String status) throws ParseException {
-
-        String url = "http://train-service/train-service/find-source-and-destination-by/train-number/" + ticketRequestDTO.getTrainNumber();
-        ResponseEntity<Map<String, String>> responseEntity = null;
-        Map<String, String> responseBody = null;
-        try {
-            responseEntity =
-                    restTemplate.exchange(
-                            url,
-                            HttpMethod.GET,
-                            null,
-                            new ParameterizedTypeReference<Map<String, String>>() {
-                            }
-                    );
-
-            if (responseEntity.getStatusCode() == HttpStatus.OK) {
-                responseBody = responseEntity.getBody();
-                // Process the response body as needed
-                System.out.println("Response: " + responseBody);
-            } else {
-                // Handle unexpected HTTP status codes
-                System.out.println("Unexpected HTTP Status Code: " + responseEntity.getStatusCode());
-            }
-        } catch (HttpClientErrorException.NotFound e) {
-            // Handle 404 Not Found error
-            System.out.println("Resource not found: " + e.getMessage());
-        } catch (HttpClientErrorException.BadRequest e) {
-            // Handle 400 Bad Request error
-            System.out.println("Bad Request: " + e.getMessage());
-        } catch (HttpClientErrorException.Unauthorized e) {
-            // Handle 401 Unauthorized error
-            System.out.println("Unauthorized: " + e.getMessage());
-        } catch (HttpClientErrorException.Forbidden e) {
-            // Handle 403 Forbidden error
-            System.out.println("Forbidden: " + e.getMessage());
-        } catch (HttpServerErrorException.InternalServerError e) {
-            // Handle 500 Internal Server Error
-            System.out.println("Internal Server Error: " + e.getMessage());
-        } catch (Exception e) {
-            // Handle other exceptions
-            System.out.println("An unexpected error occurred: " + e.getMessage());
-        }
-
-        System.out.println("responseEntity = " + responseEntity);
-
-        List<Ticket> ticketByTrainNumber = this.ticketRepository.findByTrainNumber(ticketRequestDTO.getTrainNumber());
-
-        if (!ticketByTrainNumber.isEmpty()) {
-
-            if (TICKET_CONFIRMED.equals(status)) {
-
-                Integer byEndingSeatNumber = this.passengerRepository.findByEndingSeatNumberNativeQuery(ticketRequestDTO.getTrainNumber());
-                int nextSeatNumber = byEndingSeatNumber + 1;
-
-                Ticket ticket = Ticket.builder()
-                        .pnrNumber(generateRandomNumber(10))
-                        .source(responseBody.get("Source"))
-                        .destination(responseBody.get("Destination"))
-                        .seatClass(seatClass)
-                        .coach(coach)
-                        .arrivalTime(LocalTime.parse(responseBody.get("ArrivalTime")))
-                        .departureTime(LocalTime.parse(responseBody.get("DepartureTime")))
-                        .date((new SimpleDateFormat("yyyy-MM-dd")).parse(ticketRequestDTO.getDate()))
-                        .trainNumber(ticketRequestDTO.getTrainNumber())
-                        .statuses(new ArrayList<>(List.of(TicketStatus.CONFIRMED)))
-                        .build();
-                List<Passenger> listOfPassenger = new ArrayList<>();
-                int currentSeatNumber = byEndingSeatNumber + 1;
-                for (PassengerRequestDTO passengerRequestDTO : ticketRequestDTO.getPassengers()) {
-                    Passenger passenger = Passenger.builder()
-                            .passengerId(generateRandomPassengerId(10))
-                            .passengerName(passengerRequestDTO.getPassengerName())
-                            .seatNumber(currentSeatNumber)
-                            .age(passengerRequestDTO.getAge())
-                            .ticket(ticket)
-                            .build();
-                    listOfPassenger.add(passenger);
-                    currentSeatNumber = currentSeatNumber + 1;
-                }
-
-                ticket.setPassengers(listOfPassenger);
-                this.ticketRepository.save(ticket);
-
-            } else {
-
-                Integer byEndingSeatNumber =
-                        this.passengerRepository.findByEndingSeatNumberNativeQuery(ticketRequestDTO.getTrainNumber());
-                int nextSeatNumber = byEndingSeatNumber + 1;
-
-                Ticket ticket = Ticket.builder()
-                        .pnrNumber(generateRandomNumber(10))
-                        .source(responseBody.get("Source"))
-                        .destination(responseBody.get("Destination"))
-                        .seatClass(seatClass)
-                        .coach(coach)
-                        .arrivalTime(LocalTime.parse(responseBody.get("ArrivalTime")))
-                        .departureTime(LocalTime.parse(responseBody.get("DepartureTime")))
-                        .date((new SimpleDateFormat("yyyy-MM-dd")).parse(ticketRequestDTO.getDate()))
-                        .trainNumber(ticketRequestDTO.getTrainNumber())
-                        .statuses(new ArrayList<>(List.of(TicketStatus.WAITING)))
-                        .build();
-                List<Passenger> listOfPassenger = new ArrayList<>();
-                int currentSeatNumber = byEndingSeatNumber + 1;
-                for (PassengerRequestDTO passengerRequestDTO : ticketRequestDTO.getPassengers()) {
-                    Passenger passenger = Passenger.builder()
-                            .passengerId(generateRandomPassengerId(10))
-                            .passengerName(passengerRequestDTO.getPassengerName())
-                            .seatNumber(currentSeatNumber)
-                            .age(passengerRequestDTO.getAge())
-                            .ticket(ticket)
-                            .build();
-                    listOfPassenger.add(passenger);
-                    currentSeatNumber = currentSeatNumber + 1;
-                }
-
-                ticket.setPassengers(listOfPassenger);
-                this.ticketRepository.save(ticket);
-            }
-
-        } else {
-
-            // this is for new booking
-
-            Ticket ticket = Ticket.builder()
-                    .pnrNumber(generateRandomNumber(10))
-                    .source(responseBody.get("Source"))
-                    .destination(responseBody.get("Destination"))
-                    .seatClass(seatClass)
-                    .coach(coach)
-                    .arrivalTime(LocalTime.parse(responseBody.get("ArrivalTime")))
-                    .departureTime(LocalTime.parse(responseBody.get("DepartureTime")))
-                    .date(new SimpleDateFormat("yyyy-MM-dd").parse(ticketRequestDTO.getDate()))
-                    .trainNumber(ticketRequestDTO.getTrainNumber())
-                    .statuses(new ArrayList<>(List.of(TicketStatus.CONFIRMED)))
-                    .build();
-            List<Passenger> listOfPassenger = new ArrayList<>();
-            int nextSeatNumber = 0;
-            for (PassengerRequestDTO passengerRequestDTO : ticketRequestDTO.getPassengers()) {
-                nextSeatNumber = nextSeatNumber + 1;
-                Passenger passenger = Passenger.builder()
-                        .passengerId(generateRandomPassengerId(10))
-                        .passengerName(passengerRequestDTO.getPassengerName())
-                        .seatNumber(nextSeatNumber)
-                        .age(passengerRequestDTO.getAge())
-                        .ticket(ticket)
-                        .build();
-                listOfPassenger.add(passenger);
-            }
-
-            ticket.setPassengers(listOfPassenger);
-            this.ticketRepository.save(ticket);
-
-        }
     }
 
 
