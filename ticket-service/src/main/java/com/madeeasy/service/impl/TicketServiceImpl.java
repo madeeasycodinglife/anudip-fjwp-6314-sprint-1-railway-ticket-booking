@@ -467,13 +467,14 @@ public class TicketServiceImpl implements TicketService {
                                                             passenger,
                                                             "D3",
                                                             TICKET_WAITING);
+                                                    isBooked.set(false);
                                                 } catch (ParseException e) {
                                                     throw new RuntimeException(e);
                                                 }
                                                 System.out.println("run count : ");
                                             }
                                         });
-                                if (!isBooked.get())
+                                if (isBooked.get())
                                     return ResponseEntity.status(HttpStatus.OK).body("Seats booked successfully.");
                                 else
                                     return ResponseEntity.status(HttpStatus.ACCEPTED).body("Some seats are confirmed and some are waiting !!");
@@ -556,6 +557,7 @@ public class TicketServiceImpl implements TicketService {
                                                         passenger,
                                                         "D3",
                                                         TICKET_WAITING);
+                                                isBooked.set(false);
                                             } catch (ParseException e) {
                                                 throw new RuntimeException(e);
                                             }
@@ -563,7 +565,7 @@ public class TicketServiceImpl implements TicketService {
                                         }
 
                                     });
-                            if (!isBooked.get())
+                            if (isBooked.get())
                                 return ResponseEntity.status(HttpStatus.OK).body("Seats booked successfully.");
                             else
                                 return ResponseEntity.status(HttpStatus.ACCEPTED).body("Some seats are confirmed and some are waiting !!");
@@ -616,12 +618,13 @@ public class TicketServiceImpl implements TicketService {
                                                         passenger,
                                                         "D3",
                                                         TICKET_WAITING);
+                                                isBooked.set(false);
                                             } catch (ParseException e) {
                                                 throw new RuntimeException(e);
                                             }
                                         }
                                     });
-                            if (!isBooked.get())
+                            if (isBooked.get())
                                 return ResponseEntity.status(HttpStatus.OK).body("Seats booked successfully.");
                             else
                                 return ResponseEntity.status(HttpStatus.ACCEPTED).body("Some seats are confirmed and some are waiting !!");
@@ -642,12 +645,6 @@ public class TicketServiceImpl implements TicketService {
                                                     throw new RuntimeException(e);
                                                 }
                                             });
-//                            bookSeatSequentially(
-//                                    ticketRequestDTO.getSeatClass(),
-//                                    numberOfTickets,
-//                                    ticketRequestDTO,
-//                                    "D3",
-//                                    TICKET_WAITING);
                             if (numberOfTickets == 1) {
                                 return ResponseEntity.status(HttpStatus.ACCEPTED).body("Your seat is in waiting state !!");
                             }
@@ -764,6 +761,7 @@ public class TicketServiceImpl implements TicketService {
                                                             passenger,
                                                             "AC3",
                                                             TICKET_WAITING);
+                                                    isBooked.set(false);
                                                 } catch (ParseException e) {
                                                     throw new RuntimeException(e);
                                                 }
@@ -913,12 +911,13 @@ public class TicketServiceImpl implements TicketService {
                                                         passenger,
                                                         "AC3",
                                                         TICKET_WAITING);
+                                                isBooked.set(false);
                                             } catch (ParseException e) {
                                                 throw new RuntimeException(e);
                                             }
                                         }
                                     });
-                            if (!isBooked.get())
+                            if (isBooked.get())
                                 return ResponseEntity.status(HttpStatus.OK).body("Seats booked successfully.");
                             else
                                 return ResponseEntity.status(HttpStatus.ACCEPTED).body("Some seats are confirmed and some are waiting !!");
