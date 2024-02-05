@@ -13,7 +13,9 @@ spring:
       ddl-auto: 'update'
   main:
     allow-circular-references: true
-
+  output:
+    ansi:
+      enabled: ALWAYS
 
 eureka:
   client:

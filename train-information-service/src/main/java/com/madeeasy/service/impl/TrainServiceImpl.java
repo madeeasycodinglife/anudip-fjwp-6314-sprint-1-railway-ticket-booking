@@ -289,7 +289,8 @@ public class TrainServiceImpl implements TrainService {
             throw new TrainNotFoundException("No class found with name: " + seatClass + " for train: " + trainNumber);
         }
         Coach coachInClass = findCoachInClass(trainClass, coach);
-        if (noOfSeats <= coachInClass.getSeats() && noOfSeats > 0 && coachInClass.getAvailableSeats() < coachInClass.getSeats()) {
+        if (noOfSeats <= coachInClass.getSeats() && noOfSeats > 0 && coachInClass.getAvailableSeats() < coachInClass.getSeats()
+                && (coachInClass.getAvailableSeats() + noOfSeats) <= coachInClass.getSeats()) {
             coachInClass.setAvailableSeats(coachInClass.getAvailableSeats() + noOfSeats);
             this.coachRepository.save(coachInClass);
             return ResponseEntity.status(HttpStatus.OK)
@@ -304,6 +305,27 @@ public class TrainServiceImpl implements TrainService {
         return listOfTrains.stream()
                 .map(this::convertToTrainResponseDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Map<String, Integer> checkNumberOfSeats(String trainNumber, String seatClass) {
+        Train train = findTrainByNumber(trainNumber);
+        TrainClass trainClass = findTrainClassByName(train, seatClass);
+
+        if (trainClass != null) {
+            return getSeatsPerCoach(trainClass);
+        } else {
+            throw new TrainNotFoundException("No class found with name: " + seatClass + " for train: " + trainNumber);
+        }
+    }
+
+    private Map<String, Integer> getSeatsPerCoach(TrainClass trainClass) {
+        Map<String, Integer> coachSeatsMap = new HashMap<>();
+
+        trainClass.getCoach().forEach(coach -> {
+            coachSeatsMap.put(coach.getName(), coach.getSeats());
+        });
+        return coachSeatsMap;
     }
 
     private Coach findCoachInClass(TrainClass trainClass, String coach) {

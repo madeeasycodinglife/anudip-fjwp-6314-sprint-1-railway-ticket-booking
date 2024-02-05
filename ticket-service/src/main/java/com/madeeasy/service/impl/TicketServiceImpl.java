@@ -25,6 +25,7 @@ import java.time.LocalTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -337,7 +338,7 @@ public class TicketServiceImpl implements TicketService {
                         } else {
                             // handle waiting tickets
                             ticketRequestDTO.getPassengers()
-                                    .forEach(passenger->{
+                                    .forEach(passenger -> {
                                         try {
                                             bookSeatSequentially(
                                                     ticketRequestDTO.getSeatClass(),
@@ -632,19 +633,19 @@ public class TicketServiceImpl implements TicketService {
                             // handle waiting tickets
 
                             ticketRequestDTO.getPassengers()
-                                            .forEach(passenger->{
-                                                try {
-                                                    bookSeatSequentially(
-                                                            ticketRequestDTO.getSeatClass(),
-                                                            1,
-                                                            ticketRequestDTO,
-                                                            passenger,
-                                                            "D3",
-                                                            TICKET_WAITING);
-                                                } catch (ParseException e) {
-                                                    throw new RuntimeException(e);
-                                                }
-                                            });
+                                    .forEach(passenger -> {
+                                        try {
+                                            bookSeatSequentially(
+                                                    ticketRequestDTO.getSeatClass(),
+                                                    1,
+                                                    ticketRequestDTO,
+                                                    passenger,
+                                                    "D3",
+                                                    TICKET_WAITING);
+                                        } catch (ParseException e) {
+                                            throw new RuntimeException(e);
+                                        }
+                                    });
                             if (numberOfTickets == 1) {
                                 return ResponseEntity.status(HttpStatus.ACCEPTED).body("Your seat is in waiting state !!");
                             }
@@ -924,19 +925,19 @@ public class TicketServiceImpl implements TicketService {
                         } else {
                             // handle waiting tickets
                             ticketRequestDTO.getPassengers()
-                                            .forEach(passenger ->{
-                                                try {
-                                                    bookSeatSequentially(
-                                                            ticketRequestDTO.getSeatClass(),
-                                                            1,
-                                                            ticketRequestDTO,
-                                                            passenger,
-                                                            "AC3",
-                                                            TICKET_WAITING);
-                                                } catch (ParseException e) {
-                                                    throw new RuntimeException(e);
-                                                }
-                                            });
+                                    .forEach(passenger -> {
+                                        try {
+                                            bookSeatSequentially(
+                                                    ticketRequestDTO.getSeatClass(),
+                                                    1,
+                                                    ticketRequestDTO,
+                                                    passenger,
+                                                    "AC3",
+                                                    TICKET_WAITING);
+                                        } catch (ParseException e) {
+                                            throw new RuntimeException(e);
+                                        }
+                                    });
 
                             if (numberOfTickets == 1) {
                                 return ResponseEntity.status(HttpStatus.ACCEPTED).body("Your seat is in waiting state !!");
@@ -988,81 +989,504 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     public ResponseEntity<?> cancelTicketsByPnrNumber(String pnrNumber) {
+
         Ticket ticketsFound = this.ticketRepository.findByPnrNumber(pnrNumber)
                 .orElseThrow(() -> new TicketNotFoundException("No tickets found"));
 
+        System.out.println("ticketsFound = " + ticketsFound);
 
-        List<Integer> canceledSeatNumbers = new ArrayList<Integer>();
+        String url = "http://train-service/train-service/number-of-seats/{trainNumber}/{seatClass}";
+        // Set up path variables
+        Map<String, Object> uriVariables = new HashMap<>();
+        uriVariables.put("trainNumber", ticketsFound.getTrainNumber());
+        uriVariables.put("seatClass", ticketsFound.getSeatClass());
 
-        ticketsFound.getPassengers().forEach(passenger -> {
-            canceledSeatNumbers.add(passenger.getSeatNumber());
-        });
+        ResponseEntity<Map<String, Integer>> responseEntity =
+                restTemplate.exchange(
+                        url,
+                        HttpMethod.GET,
+                        null,
+                        new ParameterizedTypeReference<Map<String, Integer>>() {
+                        },
+                        uriVariables
+                );
+        System.out.println("response = " + responseEntity);
 
-        // for ascending order
-        Collections.sort(canceledSeatNumbers);
+        Map<String, Integer> seatMap = responseEntity.getBody();
 
-        this.ticketRepository.delete(ticketsFound);
+        String seatClass = ticketsFound.getSeatClass();
+        String coach = ticketsFound.getCoach();
 
-        int lastIndex = canceledSeatNumbers.size() - 1;
-        Integer lastSeatNumber = canceledSeatNumbers.get(lastIndex);
+        if (seatClass.equals("Sleeper")) {
 
-        List<Ticket> ticketsBySeatNumberGreaterThan = this.ticketRepository
-                .findTicketsBySeatNumberGreaterThan(lastSeatNumber);
+            List<Ticket> sleeperTickets = this.ticketRepository.findAllBySeatClass("Sleeper");
 
-        final Integer[] firstPositionOfCancelledSeat = {canceledSeatNumbers.get(0)};
+            if (!sleeperTickets.isEmpty()) {
 
-        ticketsBySeatNumberGreaterThan.forEach(ticket -> {
-
-            boolean currentSeatPositionModified = false;
-
-            if (ticket.getPassengers().size() == canceledSeatNumbers.size()) {
-
-//                ticket.setStaringSeatNumber(firstPositionOfCancelledSeat[0]);
-//                ticket.setEndingSeatNumber(lastSeatNumber);
+                // Separate based on coach values (S1, S2, S3)
+                List<Ticket> s1Tickets = filterTicketsByCoach(sleeperTickets, "S1");
+                List<Ticket> s2Tickets = filterTicketsByCoach(sleeperTickets, "S2");
+                List<Ticket> s3Tickets = filterTicketsByCoach(sleeperTickets, "S3");
 
 
-                for (Passenger passenger : ticket.getPassengers()) {
-                    passenger.setSeatNumber(firstPositionOfCancelledSeat[0]);
-                    firstPositionOfCancelledSeat[0]++;
+                Integer s1PredefinedSeats = seatMap.get("S1");
+                Integer s2PredefinedSeats = seatMap.get("S2") + s1PredefinedSeats;
+                Integer s3PredefinedSeats = seatMap.get("S3") + s2PredefinedSeats;
+
+                AtomicInteger s1CurrentSeatNumber = new AtomicInteger(1);
+                AtomicInteger s2CurrentSeatNumber = new AtomicInteger(1);
+                AtomicInteger s3CurrentSeatNumber = new AtomicInteger(1);
+
+
+                sleeperTickets.forEach(ticket -> Collections.sort(ticket.getPassengers(), Comparator.comparingInt(Passenger::getSeatNumber)));
+
+                // Sorting the list of tickets based on the seat number of the first passenger (assuming each ticket has at least one passenger)
+//                Collections.sort(sleeperTickets, Comparator.comparingInt(ticket -> ticket.getPassengers().get(0).getSeatNumber()));
+
+                sleeperTickets.sort(Comparator.comparingInt(ticket ->
+                        ticket.getPassengers().isEmpty() ? Integer.MAX_VALUE : ticket.getPassengers().get(0).getSeatNumber()
+                ));
+
+                AtomicBoolean isDeleted = new AtomicBoolean(false);
+
+                sleeperTickets.forEach(System.out::println);
+                sleeperTickets.stream()
+                        .filter(sleeperTicket -> sleeperTicket != ticketsFound && !sleeperTicket.getPassengers().isEmpty())
+                        .forEach(sleeperTicket -> {
+                            System.out.println("sleeperTicket = " + sleeperTicket);
+
+                            if (s1CurrentSeatNumber.get() <= s1PredefinedSeats) {
+                                sleeperTicket.getPassengers().get(0)
+                                        .setSeatNumber(s1CurrentSeatNumber.getAndIncrement());
+                                sleeperTicket.setCoach("S1");
+                                sleeperTicket.setStatuses(new ArrayList<>(List.of(TicketStatus.CONFIRMED)));
+                                this.passengerRepository.save(sleeperTicket.getPassengers().get(0));
+                                Ticket savedTicketNewUpdated = this.ticketRepository.save(sleeperTicket);
+                                this.ticketRepository.delete(ticketsFound);
+                                System.out.println("savedTicketNewUpdated = " + savedTicketNewUpdated);
+                                s2CurrentSeatNumber.set(s1CurrentSeatNumber.get());
+                                isDeleted.set(true);
+                            } else if (s2CurrentSeatNumber.get() <= s2PredefinedSeats) {
+                                sleeperTicket.getPassengers().get(0)
+                                        .setSeatNumber(s2CurrentSeatNumber.getAndIncrement());
+                                sleeperTicket.setCoach("S2");
+                                sleeperTicket.setStatuses(new ArrayList<>(List.of(TicketStatus.CONFIRMED)));
+                                this.passengerRepository.save(sleeperTicket.getPassengers().get(0));
+                                this.ticketRepository.save(sleeperTicket);
+                                s3CurrentSeatNumber.set(s2CurrentSeatNumber.get());
+                            } else if (s3CurrentSeatNumber.get() <= s3PredefinedSeats) {
+                                sleeperTicket.getPassengers().get(0)
+                                        .setSeatNumber(s3CurrentSeatNumber.getAndIncrement());
+                                sleeperTicket.setCoach("S3");
+                                sleeperTicket.setStatuses(new ArrayList<>(List.of(TicketStatus.CONFIRMED)));
+                                this.passengerRepository.save(sleeperTicket.getPassengers().get(0));
+                                this.ticketRepository.save(sleeperTicket);
+                            } else {
+                                sleeperTicket.getPassengers().get(0)
+                                        .setSeatNumber(s3CurrentSeatNumber.getAndIncrement());
+                                sleeperTicket.setCoach("S3");
+                                sleeperTicket.setStatuses(new ArrayList<>(List.of(TicketStatus.WAITING)));
+                                this.passengerRepository.save(sleeperTicket.getPassengers().get(0));
+                                this.ticketRepository.save(sleeperTicket);
+                            }
+                        });
+
+                if (!isDeleted.get()) {
+                    this.ticketRepository.delete(ticketsFound);
                 }
 
-                currentSeatPositionModified = true;
+                Integer totalSeatsInS1 = seatMap.get("S1");
+                Integer totalSeatsInS2 = seatMap.get("S2") + totalSeatsInS1;
+                Integer totalSeatsInS3 = seatMap.get("S3") + totalSeatsInS2;
 
-            } else if (ticket.getPassengers().size() > canceledSeatNumbers.size()) {
+                Integer lastSeatNumber = this.passengerRepository.findByEndingSeatNumberNativeQuery(ticketsFound.getTrainNumber());
+                lastSeatNumber = (lastSeatNumber == null) ? 1 : lastSeatNumber + 1; // i have added 1 as one record is deleted from the table using pnr number
+                Integer seatNumberToBeSentInS1 = 0;
+                Integer seatNumberToBeSentInS2 = 0;
+                Integer seatNumberToBeSentInS3 = 0;
+                if (lastSeatNumber <= totalSeatsInS3 && lastSeatNumber > totalSeatsInS2) {
+                    seatNumberToBeSentInS3++;
+                    String seatNumberUpdateUrl = "http://train-service/train-service/increase-seat-numbers/{trainNumber}/{seatClass}/{coach}/{noOfSeats}";
 
-//                ticket.setStaringSeatNumber(firstPositionOfCancelledSeat[0]);
-//                ticket.setEndingSeatNumber(firstPositionOfCancelledSeat[0] + ticket.getPassengers().size());
+                    // Set up path variables for S3
+                    Map<String, String> updateUriVariables = new HashMap<>();
+                    updateUriVariables.put("trainNumber", ticketsFound.getTrainNumber());
+                    updateUriVariables.put("seatClass", "Sleeper");
+                    updateUriVariables.put("coach", "S3");
+                    updateUriVariables.put("noOfSeats", String.valueOf(seatNumberToBeSentInS3));
 
-                for (Passenger passenger : ticket.getPassengers()) {
-                    passenger.setSeatNumber(firstPositionOfCancelledSeat[0]++);
+                    ResponseEntity<String> increaseSeatNumbers = restTemplate.exchange(
+                            seatNumberUpdateUrl,
+                            HttpMethod.PUT,
+                            null,
+                            String.class,
+                            updateUriVariables
+                    );
+                }
+                if (lastSeatNumber <= totalSeatsInS2 && lastSeatNumber > totalSeatsInS1) {
+                    seatNumberToBeSentInS2++;
+                    String seatNumberUpdateUrl = "http://train-service/train-service/increase-seat-numbers/{trainNumber}/{seatClass}/{coach}/{noOfSeats}";
+
+                    // Set up path variables for S2
+                    Map<String, String> updateUriVariables = new HashMap<>();
+                    updateUriVariables.put("trainNumber", ticketsFound.getTrainNumber());
+                    updateUriVariables.put("seatClass", "Sleeper");
+                    updateUriVariables.put("coach", "S2");
+                    updateUriVariables.put("noOfSeats", String.valueOf(seatNumberToBeSentInS2));
+
+                    ResponseEntity<String> increaseSeatNumbers = restTemplate.exchange(
+                            seatNumberUpdateUrl,
+                            HttpMethod.PUT,
+                            null,
+                            String.class,
+                            updateUriVariables
+                    );
+                }
+                if (lastSeatNumber <= totalSeatsInS1 && lastSeatNumber > 0) {
+                    seatNumberToBeSentInS1++;
+                    String seatNumberUpdateUrl = "http://train-service/train-service/increase-seat-numbers/{trainNumber}/{seatClass}/{coach}/{noOfSeats}";
+                    // Set up path variables for S1
+                    Map<String, String> updateUriVariables = new HashMap<>();
+                    updateUriVariables.put("trainNumber", ticketsFound.getTrainNumber());
+                    updateUriVariables.put("seatClass", "Sleeper");
+                    updateUriVariables.put("coach", "S1");
+                    updateUriVariables.put("noOfSeats", String.valueOf(seatNumberToBeSentInS1));
+
+                    try {
+                        ResponseEntity<String> increaseSeatNumbers = restTemplate.exchange(
+                                seatNumberUpdateUrl,
+                                HttpMethod.PUT,
+                                null,
+                                String.class,
+                                updateUriVariables
+                        );
+                    } catch (HttpClientErrorException e) {
+                        if (e.getStatusCode() == HttpStatus.BAD_REQUEST) {
+                            // Handle BAD_REQUEST exception
+                            return ResponseEntity.status(HttpStatus.OK).body("Your tickets has been canceled successfully !!");
+                        } else {
+                            // Handle other exceptions or rethrow them if needed
+                            throw e;
+                        }
+                    }
                 }
 
-            } else {
-                // Handle the case where ticket.getPassengers().size() < canceledSeatNumbers.size()
-                // Adjusting seat numbers based on the difference in sizes
-                int difference = canceledSeatNumbers.size() - ticket.getPassengers().size();
-//                ticket.setStaringSeatNumber(firstPositionOfCancelledSeat[0]);
-//                ticket.setEndingSeatNumber(firstPositionOfCancelledSeat[0] + ticket.getPassengers().size() - 1 == 0
-//                        ? 1 : firstPositionOfCancelledSeat[0] + ticket.getPassengers().size() - 1);
+            }
+        } else if (seatClass.equals("General")) {
+            List<Ticket> generalTickets = this.ticketRepository.findAllBySeatClass("General");
+            if (!generalTickets.isEmpty()) {
 
-                // Set seat numbers for the remaining passengers
-                for (Passenger passenger : ticket.getPassengers()) {
-                    passenger.setSeatNumber(firstPositionOfCancelledSeat[0]++);
+                // Separate based on coach values (D1, D2, D3)
+                List<Ticket> d1Tickets = filterTicketsByCoach(generalTickets, "D1");
+                List<Ticket> d2Tickets = filterTicketsByCoach(generalTickets, "D2");
+                List<Ticket> d3Tickets = filterTicketsByCoach(generalTickets, "D3");
+
+                Integer d1PredefinedSeats = seatMap.get("D1");
+                Integer d2PredefinedSeats = seatMap.get("D2") + d1PredefinedSeats;
+                Integer d3PredefinedSeats = seatMap.get("D3") + d2PredefinedSeats;
+
+                AtomicInteger d1CurrentSeatNumber = new AtomicInteger(1);
+                AtomicInteger d2CurrentSeatNumber = new AtomicInteger(1);
+                AtomicInteger d3CurrentSeatNumber = new AtomicInteger(1);
+
+
+                generalTickets.forEach(ticket -> Collections.sort(ticket.getPassengers(), Comparator.comparingInt(Passenger::getSeatNumber)));
+
+                // Sorting the list of tickets based on the seat number of the first passenger (assuming each ticket has at least one passenger)
+//                Collections.sort(generalTickets, Comparator.comparingInt(ticket -> ticket.getPassengers().get(0).getSeatNumber()));
+
+                // Sorting the list of tickets based on the seat number of the first passenger
+                generalTickets.sort(Comparator.comparingInt(ticket ->
+                        ticket.getPassengers().isEmpty() ? Integer.MAX_VALUE : ticket.getPassengers().get(0).getSeatNumber()
+                ));
+
+                generalTickets.forEach(System.out::println);
+                AtomicBoolean isDeleted = new AtomicBoolean(false);
+                generalTickets.stream()
+                        .filter(generalTicket -> generalTicket != ticketsFound && !generalTicket.getPassengers().isEmpty())
+                        .forEach(generalTicket -> {
+                            System.out.println("generalTicket = " + generalTicket);
+
+                            if (d1CurrentSeatNumber.get() <= d1PredefinedSeats) {
+                                generalTicket.getPassengers().get(0)
+                                        .setSeatNumber(d1CurrentSeatNumber.getAndIncrement());
+                                generalTicket.setCoach("D1");
+                                generalTicket.setStatuses(new ArrayList<>(List.of(TicketStatus.CONFIRMED)));
+                                this.passengerRepository.save(generalTicket.getPassengers().get(0));
+                                Ticket savedTicketNewUpdated = this.ticketRepository.save(generalTicket);
+                                this.ticketRepository.delete(ticketsFound);
+                                isDeleted.set(true);
+                                System.out.println("savedTicketNewUpdated = " + savedTicketNewUpdated);
+                                d2CurrentSeatNumber.set(d1CurrentSeatNumber.get());
+                            } else if (d2CurrentSeatNumber.get() <= d2PredefinedSeats) {
+                                generalTicket.getPassengers().get(0)
+                                        .setSeatNumber(d2CurrentSeatNumber.getAndIncrement());
+                                generalTicket.setCoach("D2");
+                                generalTicket.setStatuses(new ArrayList<>(List.of(TicketStatus.CONFIRMED)));
+                                this.passengerRepository.save(generalTicket.getPassengers().get(0));
+                                this.ticketRepository.save(generalTicket);
+                                d3CurrentSeatNumber.set(d2CurrentSeatNumber.get());
+                            } else if (d3CurrentSeatNumber.get() <= d3PredefinedSeats) {
+                                generalTicket.getPassengers().get(0)
+                                        .setSeatNumber(d3CurrentSeatNumber.getAndIncrement());
+                                generalTicket.setCoach("D3");
+                                generalTicket.setStatuses(new ArrayList<>(List.of(TicketStatus.CONFIRMED)));
+                                this.passengerRepository.save(generalTicket.getPassengers().get(0));
+                                this.ticketRepository.save(generalTicket);
+                            } else {
+                                generalTicket.getPassengers().get(0)
+                                        .setSeatNumber(d3CurrentSeatNumber.getAndIncrement());
+                                generalTicket.setCoach("D3");
+                                generalTicket.setStatuses(new ArrayList<>(List.of(TicketStatus.WAITING)));
+                                this.passengerRepository.save(generalTicket.getPassengers().get(0));
+                                this.ticketRepository.save(generalTicket);
+                            }
+                        });
+
+                if (!isDeleted.get()) {
+                    this.ticketRepository.delete(ticketsFound);
+                }
+
+                Integer totalSeatsInD1 = seatMap.get("D1");
+                Integer totalSeatsInD2 = seatMap.get("D2") + totalSeatsInD1;
+                Integer totalSeatsInD3 = seatMap.get("D3") + totalSeatsInD2;
+
+                Integer lastSeatNumber = this.passengerRepository.findByEndingSeatNumberNativeQuery(ticketsFound.getTrainNumber());
+                lastSeatNumber = (lastSeatNumber == null) ? 1 : lastSeatNumber + 1; // i have added 1 as one record is deleted from the table using pnr number
+                Integer seatNumberToBeSentInD1 = 0;
+                Integer seatNumberToBeSentInD2 = 0;
+                Integer seatNumberToBeSentInD3 = 0;
+                if (lastSeatNumber <= totalSeatsInD3 && lastSeatNumber > totalSeatsInD2) {
+
+                    seatNumberToBeSentInD3++;
+                    String seatNumberUpdateUrl = "http://train-service/train-service/increase-seat-numbers/{trainNumber}/{seatClass}/{coach}/{noOfSeats}";
+
+                    // Set up path variables for S3
+                    Map<String, String> updateUriVariables = new HashMap<>();
+                    updateUriVariables.put("trainNumber", ticketsFound.getTrainNumber());
+                    updateUriVariables.put("seatClass", "General");
+                    updateUriVariables.put("coach", "D3");
+                    updateUriVariables.put("noOfSeats", String.valueOf(seatNumberToBeSentInD3));
+
+                    ResponseEntity<String> increaseSeatNumbers = restTemplate.exchange(
+                            seatNumberUpdateUrl,
+                            HttpMethod.PUT,
+                            null,
+                            String.class,
+                            updateUriVariables
+                    );
+                }
+                if (lastSeatNumber <= totalSeatsInD2 && lastSeatNumber > totalSeatsInD1) {
+
+                    seatNumberToBeSentInD2++;
+                    String seatNumberUpdateUrl = "http://train-service/train-service/increase-seat-numbers/{trainNumber}/{seatClass}/{coach}/{noOfSeats}";
+
+                    // Set up path variables for S2
+                    Map<String, String> updateUriVariables = new HashMap<>();
+                    updateUriVariables.put("trainNumber", ticketsFound.getTrainNumber());
+                    updateUriVariables.put("seatClass", "General");
+                    updateUriVariables.put("coach", "D2");
+                    updateUriVariables.put("noOfSeats", String.valueOf(seatNumberToBeSentInD2));
+
+                    ResponseEntity<String> increaseSeatNumbers = restTemplate.exchange(
+                            seatNumberUpdateUrl,
+                            HttpMethod.PUT,
+                            null,
+                            String.class,
+                            updateUriVariables
+                    );
+                }
+                if (lastSeatNumber <= totalSeatsInD1 && lastSeatNumber > 0) {
+
+                    seatNumberToBeSentInD1++;
+                    String seatNumberUpdateUrl = "http://train-service/train-service/increase-seat-numbers/{trainNumber}/{seatClass}/{coach}/{noOfSeats}";
+                    // Set up path variables for S1
+                    Map<String, String> updateUriVariables = new HashMap<>();
+                    updateUriVariables.put("trainNumber", ticketsFound.getTrainNumber());
+                    updateUriVariables.put("seatClass", "General");
+                    updateUriVariables.put("coach", "D1");
+                    updateUriVariables.put("noOfSeats", String.valueOf(seatNumberToBeSentInD1));
+
+                    try {
+                        ResponseEntity<String> increaseSeatNumbers = restTemplate.exchange(
+                                seatNumberUpdateUrl,
+                                HttpMethod.PUT,
+                                null,
+                                String.class,
+                                updateUriVariables
+                        );
+                    } catch (HttpClientErrorException e) {
+                        if (e.getStatusCode() == HttpStatus.BAD_REQUEST) {
+                            // Handle BAD_REQUEST exception
+                            return ResponseEntity.status(HttpStatus.OK).body("Your tickets has been canceled successfully !!");
+                        } else {
+                            // Handle other exceptions or rethrow them if needed
+                            throw e;
+                        }
+                    }
                 }
             }
+        } else {
+            List<Ticket> acTickets = this.ticketRepository.findAllBySeatClass("AC");
+            if (!acTickets.isEmpty()) {
+                // Separate based on coach values (AC1, AC2, AC3)
+                List<Ticket> ac1Tickets = filterTicketsByCoach(acTickets, "AC1");
+                List<Ticket> ac2Tickets = filterTicketsByCoach(acTickets, "AC2");
+                List<Ticket> ac3Tickets = filterTicketsByCoach(acTickets, "AC3");
 
-            if (currentSeatPositionModified) {
+                Integer ac1PredefinedSeats = seatMap.get("AC1");
+                Integer ac2PredefinedSeats = seatMap.get("AC2") + ac1PredefinedSeats;
+                Integer ac3PredefinedSeats = seatMap.get("AC3") + ac2PredefinedSeats;
 
+                AtomicInteger ac1CurrentSeatNumber = new AtomicInteger(1);
+                AtomicInteger ac2CurrentSeatNumber = new AtomicInteger(1);
+                AtomicInteger ac3CurrentSeatNumber = new AtomicInteger(1);
+
+
+                acTickets.forEach(ticket -> Collections.sort(ticket.getPassengers(), Comparator.comparingInt(Passenger::getSeatNumber)));
+
+                // Sorting the list of tickets based on the seat number of the first passenger (assuming each ticket has at least one passenger)
+//                Collections.sort(acTickets, Comparator.comparingInt(ticket -> ticket.getPassengers().get(0).getSeatNumber()));
+
+                acTickets.sort(Comparator.comparingInt(ticket ->
+                        ticket.getPassengers().isEmpty() ? Integer.MAX_VALUE : ticket.getPassengers().get(0).getSeatNumber()
+                ));
+                AtomicBoolean isDeleted = new AtomicBoolean(false);
+                acTickets.forEach(System.out::println);
+                acTickets.stream()
+                        .filter(acTicket -> acTicket != ticketsFound && !acTicket.getPassengers().isEmpty())
+                        .forEach(acTicket -> {
+                            System.out.println("acTicket = " + acTicket);
+
+                            if (ac1CurrentSeatNumber.get() <= ac1PredefinedSeats) {
+                                acTicket.getPassengers().get(0)
+                                        .setSeatNumber(ac1CurrentSeatNumber.getAndIncrement());
+                                acTicket.setCoach("AC1");
+                                acTicket.setStatuses(new ArrayList<>(List.of(TicketStatus.CONFIRMED)));
+                                this.passengerRepository.save(acTicket.getPassengers().get(0));
+                                Ticket savedTicketNewUpdated = this.ticketRepository.save(acTicket);
+                                this.ticketRepository.delete(ticketsFound);
+                                System.out.println("savedTicketNewUpdated = " + savedTicketNewUpdated);
+                                ac2CurrentSeatNumber.set(ac1CurrentSeatNumber.get());
+                                isDeleted.set(true);
+                            } else if (ac2CurrentSeatNumber.get() <= ac2PredefinedSeats) {
+                                acTicket.getPassengers().get(0)
+                                        .setSeatNumber(ac2CurrentSeatNumber.getAndIncrement());
+                                acTicket.setCoach("AC2");
+                                acTicket.setStatuses(new ArrayList<>(List.of(TicketStatus.CONFIRMED)));
+                                this.passengerRepository.save(acTicket.getPassengers().get(0));
+                                this.ticketRepository.save(acTicket);
+                                ac3CurrentSeatNumber.set(ac2CurrentSeatNumber.get());
+                            } else if (ac3CurrentSeatNumber.get() <= ac3PredefinedSeats) {
+                                acTicket.getPassengers().get(0)
+                                        .setSeatNumber(ac3CurrentSeatNumber.getAndIncrement());
+                                acTicket.setCoach("AC3");
+                                acTicket.setStatuses(new ArrayList<>(List.of(TicketStatus.CONFIRMED)));
+                                this.passengerRepository.save(acTicket.getPassengers().get(0));
+                                this.ticketRepository.save(acTicket);
+                            } else {
+                                acTicket.getPassengers().get(0)
+                                        .setSeatNumber(ac3CurrentSeatNumber.getAndIncrement());
+                                acTicket.setCoach("AC3");
+                                acTicket.setStatuses(new ArrayList<>(List.of(TicketStatus.WAITING)));
+                                this.passengerRepository.save(acTicket.getPassengers().get(0));
+                                this.ticketRepository.save(acTicket);
+                            }
+                        });
+
+                if (!isDeleted.get()) {
+                    this.ticketRepository.delete(ticketsFound);
+                }
+
+                Integer totalSeatsInAC1 = seatMap.get("AC1");
+                Integer totalSeatsInAC2 = seatMap.get("AC2") + totalSeatsInAC1;
+                Integer totalSeatsInAC3 = seatMap.get("AC3") + totalSeatsInAC2;
+
+                Integer lastSeatNumber = this.passengerRepository.findByEndingSeatNumberNativeQuery(ticketsFound.getTrainNumber());
+                lastSeatNumber = (lastSeatNumber == null) ? 1 : lastSeatNumber + 1; // i have added 1 as one record is deleted from the table using pnr number
+
+                Integer seatNumberToBeSentInAC1 = 0;
+                Integer seatNumberToBeSentInAC2 = 0;
+                Integer seatNumberToBeSentInAC3 = 0;
+
+                if (lastSeatNumber <= totalSeatsInAC3 && lastSeatNumber > totalSeatsInAC2) {
+
+                    seatNumberToBeSentInAC3++;
+                    String seatNumberUpdateUrl = "http://train-service/train-service/increase-seat-numbers/{trainNumber}/{seatClass}/{coach}/{noOfSeats}";
+
+                    // Set up path variables for S3
+                    Map<String, String> updateUriVariables = new HashMap<>();
+                    updateUriVariables.put("trainNumber", ticketsFound.getTrainNumber());
+                    updateUriVariables.put("seatClass", "AC");
+                    updateUriVariables.put("coach", "AC3");
+                    updateUriVariables.put("noOfSeats", String.valueOf(seatNumberToBeSentInAC3));
+
+                    ResponseEntity<String> increaseSeatNumbers = restTemplate.exchange(
+                            seatNumberUpdateUrl,
+                            HttpMethod.PUT,
+                            null,
+                            String.class,
+                            updateUriVariables
+                    );
+                }
+                if (lastSeatNumber <= totalSeatsInAC2 && lastSeatNumber > totalSeatsInAC1) {
+
+                    seatNumberToBeSentInAC2++;
+                    String seatNumberUpdateUrl = "http://train-service/train-service/increase-seat-numbers/{trainNumber}/{seatClass}/{coach}/{noOfSeats}";
+
+                    // Set up path variables for S2
+                    Map<String, String> updateUriVariables = new HashMap<>();
+                    updateUriVariables.put("trainNumber", ticketsFound.getTrainNumber());
+                    updateUriVariables.put("seatClass", "AC");
+                    updateUriVariables.put("coach", "AC2");
+                    updateUriVariables.put("noOfSeats", String.valueOf(seatNumberToBeSentInAC2));
+
+                    ResponseEntity<String> increaseSeatNumbers = restTemplate.exchange(
+                            seatNumberUpdateUrl,
+                            HttpMethod.PUT,
+                            null,
+                            String.class,
+                            updateUriVariables
+                    );
+                }
+                if (lastSeatNumber <= totalSeatsInAC1 && lastSeatNumber > 0) {
+
+                    seatNumberToBeSentInAC1++;
+                    String seatNumberUpdateUrl = "http://train-service/train-service/increase-seat-numbers/{trainNumber}/{seatClass}/{coach}/{noOfSeats}";
+                    // Set up path variables for S1
+                    Map<String, String> updateUriVariables = new HashMap<>();
+                    updateUriVariables.put("trainNumber", ticketsFound.getTrainNumber());
+                    updateUriVariables.put("seatClass", "AC");
+                    updateUriVariables.put("coach", "AC1");
+                    updateUriVariables.put("noOfSeats", String.valueOf(seatNumberToBeSentInAC1));
+
+                    try {
+                        ResponseEntity<String> increaseSeatNumbers = restTemplate.exchange(
+                                seatNumberUpdateUrl,
+                                HttpMethod.PUT,
+                                null,
+                                String.class,
+                                updateUriVariables
+                        );
+                    } catch (HttpClientErrorException e) {
+                        if (e.getStatusCode() == HttpStatus.BAD_REQUEST) {
+                            // Handle BAD_REQUEST exception
+                            return ResponseEntity.status(HttpStatus.OK).body("Your tickets has been canceled successfully !!");
+                        } else {
+                            // Handle other exceptions or rethrow them if needed
+                            throw e;
+                        }
+                    }
+                }
             }
-
-        });
-
-
-//
-//        for (int canceledSeatNumber : canceledSeatNumbers) {
-//            cancelSeat(ticket, canceledSeatNumber);
-//        }
+        }
         return ResponseEntity.status(HttpStatus.OK).body("Your tickets has been canceled successfully !!");
+    }
+
+    private static List<Ticket> filterTicketsByCoach(List<Ticket> tickets, String coach) {
+        return tickets.stream()
+                .filter(ticket -> coach.equals(ticket.getCoach()))
+                .collect(Collectors.toList());
     }
 
     private Integer calculateEndingSeatNumber(Ticket ticket, int canceledSeatCount) {
@@ -1141,39 +1565,74 @@ public class TicketServiceImpl implements TicketService {
 
             if (TICKET_CONFIRMED.equals(status)) {
 
-                Integer byEndingSeatNumber = this.passengerRepository.findByEndingSeatNumberNativeQuery(ticketRequestDTO
-                        .getTrainNumber());
+                Integer byEndingSeatNumber = this.passengerRepository.findByEndingSeatNumberAndSeatClassNativeQuery(ticketRequestDTO
+                        .getTrainNumber(), seatClass);
 
-                Ticket ticket = Ticket.builder()
-                        .pnrNumber(generateRandomNumber(10))
-                        .source(responseBody.get("Source"))
-                        .destination(responseBody.get("Destination"))
-                        .seatClass(seatClass)
-                        .coach(coach)
-                        .arrivalTime(LocalTime.parse(responseBody.get("ArrivalTime")))
-                        .departureTime(LocalTime.parse(responseBody.get("DepartureTime")))
-                        .date((new SimpleDateFormat("yyyy-MM-dd")).parse(ticketRequestDTO.getDate()))
-                        .trainNumber(ticketRequestDTO.getTrainNumber())
-                        .statuses(new ArrayList<>(List.of(TicketStatus.CONFIRMED)))
-                        .build();
-                List<Passenger> listOfPassenger = new ArrayList<>();
-                int currentSeatNumber = byEndingSeatNumber + 1;
+                if (byEndingSeatNumber != null) {
 
-                Passenger passengerBuilder = Passenger.builder()
-                        .passengerId(generateRandomPassengerId(10))
-                        .passengerName(passenger.getPassengerName())
-                        .seatNumber(currentSeatNumber)
-                        .age(passenger.getAge())
-                        .ticket(ticket)
-                        .build();
-                listOfPassenger.add(passengerBuilder);
+                    Ticket ticket = Ticket.builder()
+                            .pnrNumber(generateRandomNumber(10))
+                            .source(responseBody.get("Source"))
+                            .destination(responseBody.get("Destination"))
+                            .seatClass(seatClass)
+                            .coach(coach)
+                            .arrivalTime(LocalTime.parse(responseBody.get("ArrivalTime")))
+                            .departureTime(LocalTime.parse(responseBody.get("DepartureTime")))
+                            .date((new SimpleDateFormat("yyyy-MM-dd")).parse(ticketRequestDTO.getDate()))
+                            .trainNumber(ticketRequestDTO.getTrainNumber())
+                            .statuses(new ArrayList<>(List.of(TicketStatus.CONFIRMED)))
+                            .build();
 
-                ticket.setPassengers(listOfPassenger);
-                this.ticketRepository.save(ticket);
+                    List<Passenger> listOfPassenger = new ArrayList<>();
+                    int currentSeatNumber = byEndingSeatNumber + 1;
+
+                    Passenger passengerBuilder = Passenger.builder()
+                            .passengerId(generateRandomPassengerId(10))
+                            .passengerName(passenger.getPassengerName())
+                            .seatNumber(currentSeatNumber)
+                            .age(passenger.getAge())
+                            .ticket(ticket)
+                            .build();
+                    listOfPassenger.add(passengerBuilder);
+
+                    ticket.setPassengers(listOfPassenger);
+                    this.ticketRepository.save(ticket);
+
+                } else {
+                    // this is for new booking
+
+                    Ticket ticket = Ticket.builder()
+                            .pnrNumber(generateRandomNumber(10))
+                            .source(responseBody.get("Source"))
+                            .destination(responseBody.get("Destination"))
+                            .seatClass(seatClass)
+                            .coach(coach)
+                            .arrivalTime(LocalTime.parse(responseBody.get("ArrivalTime")))
+                            .departureTime(LocalTime.parse(responseBody.get("DepartureTime")))
+                            .date(new SimpleDateFormat("yyyy-MM-dd").parse(ticketRequestDTO.getDate()))
+                            .trainNumber(ticketRequestDTO.getTrainNumber())
+                            .statuses(new ArrayList<>(List.of(TicketStatus.CONFIRMED)))
+                            .build();
+                    List<Passenger> listOfPassenger = new ArrayList<>();
+                    int nextSeatNumber = 0;
+
+                    nextSeatNumber = nextSeatNumber + 1;
+                    Passenger passengerBuilder = Passenger.builder()
+                            .passengerId(generateRandomPassengerId(10))
+                            .passengerName(passenger.getPassengerName())
+                            .seatNumber(nextSeatNumber)
+                            .age(passenger.getAge())
+                            .ticket(ticket)
+                            .build();
+                    listOfPassenger.add(passengerBuilder);
+
+                    ticket.setPassengers(listOfPassenger);
+                    this.ticketRepository.save(ticket);
+                }
 
             } else {
 
-                Integer byEndingSeatNumber = this.passengerRepository.findByEndingSeatNumberNativeQuery(ticketRequestDTO.getTrainNumber());
+                Integer byEndingSeatNumber = this.passengerRepository.findByEndingSeatNumberAndSeatClassNativeQuery(ticketRequestDTO.getTrainNumber(), seatClass);
 
                 Ticket ticket = Ticket.builder()
                         .pnrNumber(generateRandomNumber(10))

@@ -15,12 +15,8 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
 
     Optional<Ticket> findByPnrNumber(String pnrNumber);
 
-
-//    @Query(
-//            value = "SELECT MAX(ending_seat_number) FROM Ticket WHERE train_number = :train_number",
-//            nativeQuery = true
-//    )
-//    Integer findByEndingSeatNumberNativeQuery(@Param("train_number") String trainNumber);
+    @Query(value = "SELECT * FROM Ticket WHERE seat_class = :seatClass", nativeQuery = true)
+    List<Ticket> findAllBySeatClass(@Param("seatClass") String seatClass);
 
     List<Ticket> findByTrainNumber(String trainNumber);
 

@@ -31,5 +31,7 @@ public interface TrainService {
     ResponseEntity<?> addSeatNumbers(String trainNumber, String seatClass, String coach, int noOfSeats);
 
     List<TrainResponseDTO> getTrainsBySourceAndDestination(String source, String destination);
+
+    Map<String, Integer> checkNumberOfSeats(String trainNumber, String seatClass);
 }
 

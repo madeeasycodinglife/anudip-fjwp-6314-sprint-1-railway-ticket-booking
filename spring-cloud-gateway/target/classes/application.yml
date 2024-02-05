@@ -72,7 +72,9 @@ spring:
               args:
                 name: station-service-circuit-breaker
                 fallbackUri: forward:/fallback/station-service-fallback
-
+  output:
+    ansi:
+      enabled: ALWAYS
 
 
 eureka:

@@ -107,6 +107,26 @@ public class TrainController {
         Map<String, Integer> availableSeats = trainService.checkNumberOfAvailableSeats(trainNumber, seatClass);
         return new ResponseEntity<>(availableSeats, HttpStatus.OK);
     }
+    @Operation(
+            summary = "Check number of seats",
+            description = "Check number of seats",
+            tags = {"Check number of seats"}
+    )
+    @GetMapping("/number-of-seats/{trainNumber}/{seatClass}")
+    @SecurityRequirement(
+            name = "Bearer Authentication"
+    )
+    public ResponseEntity<?> checkNumberOfSeats(
+            @Parameter(description = "number of the train to be searched", required = true)
+            @PathVariable String trainNumber,
+            @Parameter(description = "Class of the seat to be searched", required = true)
+            @PathVariable String seatClass) {
+
+        Map<String, Integer> availableSeats = trainService.checkNumberOfSeats(trainNumber, seatClass);
+        return new ResponseEntity<>(availableSeats, HttpStatus.OK);
+    }
+
+
 
     @GetMapping("/find-source-and-destination-by/train-number/{trainNumber}")
     @Hidden

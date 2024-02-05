@@ -35,6 +35,7 @@ public class SecurityConfiguration {
                                 .requestMatchers("/train-service/get-trains/**").permitAll()
                                 .requestMatchers("/train-service/trains/**").permitAll()
                                 .requestMatchers("/train-service/get-all-trains/**").permitAll()
+                                .requestMatchers("/train-service/number-of-seats/**").permitAll()
                                 .requestMatchers("/train-service/find-source-and-destination-by/train-number/**").permitAll()
                                 .anyRequest().authenticated()
                 )

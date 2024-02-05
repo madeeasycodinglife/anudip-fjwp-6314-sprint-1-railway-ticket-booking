@@ -27,5 +27,6 @@ public class Passenger {
     @ManyToOne(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JoinColumn(name = "ticket_id")
     @JsonBackReference
+    @ToString.Exclude
     private Ticket ticket;
 }
