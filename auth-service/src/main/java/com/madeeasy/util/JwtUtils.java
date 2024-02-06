@@ -1,5 +1,6 @@
 package com.madeeasy.util;
 
+import com.madeeasy.exception.UserNotFoundException;
 import com.madeeasy.vo.UserResponseDTO;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -8,8 +9,12 @@ import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import javax.crypto.SecretKey;
@@ -33,7 +38,17 @@ public class JwtUtils {
         // make a rest-call to user-service to get roles of the user
         String url = "http://user-service/user-service/get-user-by-email/" + email;
         UserResponseDTO userResponseDTO =
-                this.restTemplate.getForEntity(url, UserResponseDTO.class).getBody();
+                null;
+        try {
+            userResponseDTO = this.restTemplate.getForEntity(url, UserResponseDTO.class).getBody();
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                throw new UserNotFoundException("User not found");
+            } else {
+                // Handle other exceptions or rethrow them if needed
+                throw e;
+            }
+        }
 
         assert userResponseDTO != null;
         if (userResponseDTO.getPassword() != null) {

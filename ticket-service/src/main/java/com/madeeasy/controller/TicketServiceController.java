@@ -5,6 +5,7 @@ import com.madeeasy.dto.request.TicketRequestDTO;
 import com.madeeasy.service.TicketService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +34,7 @@ public class TicketServiceController {
     @PostMapping("/book/tickets/{number-of-tickets}")
     public ResponseEntity<?> bookNextAvailableSeats(
             @PathVariable("number-of-tickets") @Min(value = 1) int numberOfTickets,
-            @RequestBody TicketRequestDTO ticketRequestDTO) {
+            @RequestBody @Valid TicketRequestDTO ticketRequestDTO) {
         return this.ticketService.bookNextAvailableSeats(numberOfTickets, ticketRequestDTO);
     }
 

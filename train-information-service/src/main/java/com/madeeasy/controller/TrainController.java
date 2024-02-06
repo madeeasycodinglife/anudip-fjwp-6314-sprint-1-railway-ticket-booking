@@ -42,6 +42,7 @@ public class TrainController {
     @SecurityRequirement(
             name = "Bearer Authentication"
     )
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<List<TrainResponseDTO>> getAllTrains() {
         List<TrainResponseDTO> trains = trainService.getAllTrains();
         return new ResponseEntity<>(trains, HttpStatus.OK);
@@ -107,6 +108,7 @@ public class TrainController {
         Map<String, Integer> availableSeats = trainService.checkNumberOfAvailableSeats(trainNumber, seatClass);
         return new ResponseEntity<>(availableSeats, HttpStatus.OK);
     }
+
     @Operation(
             summary = "Check number of seats",
             description = "Check number of seats",
@@ -125,7 +127,6 @@ public class TrainController {
         Map<String, Integer> availableSeats = trainService.checkNumberOfSeats(trainNumber, seatClass);
         return new ResponseEntity<>(availableSeats, HttpStatus.OK);
     }
-
 
 
     @GetMapping("/find-source-and-destination-by/train-number/{trainNumber}")
@@ -222,7 +223,7 @@ public class TrainController {
         trainService.deleteTrain(trainId);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
-    
+
     @Operation(
             summary = "search trains",
             description = "Search trains",

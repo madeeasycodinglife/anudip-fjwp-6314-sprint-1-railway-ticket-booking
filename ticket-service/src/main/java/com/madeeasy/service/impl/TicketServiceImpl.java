@@ -5,6 +5,7 @@ import com.madeeasy.dto.request.TicketRequestDTO;
 import com.madeeasy.entity.Passenger;
 import com.madeeasy.entity.Ticket;
 import com.madeeasy.entity.TicketStatus;
+import com.madeeasy.exception.InvalidDateException;
 import com.madeeasy.exception.TicketNotFoundException;
 import com.madeeasy.repository.PassengerRepository;
 import com.madeeasy.repository.TicketRepository;
@@ -21,6 +22,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -963,7 +965,8 @@ public class TicketServiceImpl implements TicketService {
         } catch (Exception e) {
             // Handle other exceptions
             System.out.println("e = " + e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
+            throw e;
         }
         return null;
     }
@@ -1579,7 +1582,14 @@ public class TicketServiceImpl implements TicketService {
                         .getTrainNumber(), seatClass);
 
                 if (byEndingSeatNumber != null) {
+                    // Convert string to LocalDate
+                    LocalDate localDate = LocalDate.parse(ticketRequestDTO.getDate());
 
+                    // Validate date as future or present
+                    if (localDate.isBefore(LocalDate.now())) {
+                        // Handle validation error, e.g., throw an exception or return an error response
+                        throw new InvalidDateException("Date must be in the future or present!!");
+                    }
                     Ticket ticket = Ticket.builder()
                             .pnrNumber(generateRandomNumber(10))
                             .source(responseBody.get("Source"))
@@ -1610,7 +1620,14 @@ public class TicketServiceImpl implements TicketService {
 
                 } else {
                     // this is for new booking
+                    // Convert string to LocalDate
+                    LocalDate localDate = LocalDate.parse(ticketRequestDTO.getDate());
 
+                    // Validate date as future or present
+                    if (localDate.isBefore(LocalDate.now())) {
+                        // Handle validation error, e.g., throw an exception or return an error response
+                        throw new InvalidDateException("Date must be in the future or present!!");
+                    }
                     Ticket ticket = Ticket.builder()
                             .pnrNumber(generateRandomNumber(10))
                             .source(responseBody.get("Source"))
@@ -1641,7 +1658,14 @@ public class TicketServiceImpl implements TicketService {
                 }
 
             } else {
+                // Convert string to LocalDate
+                LocalDate localDate = LocalDate.parse(ticketRequestDTO.getDate());
 
+                // Validate date as future or present
+                if (localDate.isBefore(LocalDate.now())) {
+                    // Handle validation error, e.g., throw an exception or return an error response
+                    throw new InvalidDateException("Date must be in the future or present!!");
+                }
                 Integer byEndingSeatNumber = this.passengerRepository.findByEndingSeatNumberAndSeatClassNativeQuery(ticketRequestDTO.getTrainNumber(), seatClass);
 
                 Ticket ticket = Ticket.builder()
@@ -1675,7 +1699,14 @@ public class TicketServiceImpl implements TicketService {
         } else {
 
             // this is for new booking
+            // Convert string to LocalDate
+            LocalDate localDate = LocalDate.parse(ticketRequestDTO.getDate());
 
+            // Validate date as future or present
+            if (localDate.isBefore(LocalDate.now())) {
+                // Handle validation error, e.g., throw an exception or return an error response
+                throw new InvalidDateException("Date must be in the future or present!!");
+            }
             Ticket ticket = Ticket.builder()
                     .pnrNumber(generateRandomNumber(10))
                     .source(responseBody.get("Source"))
