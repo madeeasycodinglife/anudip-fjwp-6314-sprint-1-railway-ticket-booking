@@ -82,4 +82,22 @@ public class TicketServiceController {
             @PathVariable("pnr-number") String pnrNumber) {
         return this.ticketService.checkTicketsStatusByPnrNumber(pnrNumber);
     }
+
+    // filter tickets by train number and seat class
+    @Operation(
+            summary = "Filter tickets by train number and seat class",
+            description = "Filter tickets by train number and seat class",
+            tags = {"Filter tickets by train number and seat class"}
+    )
+    @SecurityRequirement(
+            name = "Bearer Authentication"
+    )
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/get-all/by/train-number/{trainNumber}/{seatClass}")
+    public ResponseEntity<?> getAllTicketsByTrainNumberAndSeatClass(
+            @PathVariable("trainNumber") String trainNumber,
+            @PathVariable("seatClass") String seatClass
+    ) {
+        return this.ticketService.getAllTicketsByTrainNumberAndSeatClass(trainNumber, seatClass);
+    }
 }

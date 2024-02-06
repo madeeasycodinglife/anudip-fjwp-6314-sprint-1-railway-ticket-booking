@@ -34,4 +34,12 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
     )
     List<Ticket> findTicketsBySeatNumberGreaterThan(@Param("seatNumber") int seatNumber);
 
+    @Query(
+            value = "SELECT * FROM ticket t WHERE t.train_number = :trainNumber AND t.seat_class = :seatClass",
+            nativeQuery = true
+    )
+    List<Ticket> findByTrainNumberAndSeatClassNativeQuery(
+            @Param("trainNumber") String trainNumber,
+            @Param("seatClass") String seatClass
+    );
 }
