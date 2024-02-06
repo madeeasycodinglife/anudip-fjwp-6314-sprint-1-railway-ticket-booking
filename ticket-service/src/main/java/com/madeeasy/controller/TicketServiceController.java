@@ -47,7 +47,7 @@ public class TicketServiceController {
             name = "Bearer Authentication"
     )
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
-    @DeleteMapping("/cancel/tickets/{pnr-number}/{no-of-tickets}")
+    @DeleteMapping("/cancel/tickets/{pnr-number}")
     public ResponseEntity<?> cancelTicketsByPnrNumber(
             @PathVariable("pnr-number") String pnrNumber
     ) {

@@ -1099,7 +1099,7 @@ public class TicketServiceImpl implements TicketService {
                 Integer totalSeatsInS2 = seatMap.get("S2") + totalSeatsInS1;
                 Integer totalSeatsInS3 = seatMap.get("S3") + totalSeatsInS2;
 
-                Integer lastSeatNumber = this.passengerRepository.findByEndingSeatNumberNativeQuery(ticketsFound.getTrainNumber());
+                Integer lastSeatNumber = this.passengerRepository.findByEndingSeatNumberAndSeatClassNativeQuery(ticketsFound.getTrainNumber(),seatClass);
                 lastSeatNumber = (lastSeatNumber == null) ? 1 : lastSeatNumber + 1; // i have added 1 as one record is deleted from the table using pnr number
                 Integer seatNumberToBeSentInS1 = 0;
                 Integer seatNumberToBeSentInS2 = 0;
@@ -1251,7 +1251,7 @@ public class TicketServiceImpl implements TicketService {
                 Integer totalSeatsInD2 = seatMap.get("D2") + totalSeatsInD1;
                 Integer totalSeatsInD3 = seatMap.get("D3") + totalSeatsInD2;
 
-                Integer lastSeatNumber = this.passengerRepository.findByEndingSeatNumberNativeQuery(ticketsFound.getTrainNumber());
+                Integer lastSeatNumber = this.passengerRepository.findByEndingSeatNumberAndSeatClassNativeQuery(ticketsFound.getTrainNumber(),seatClass);
                 lastSeatNumber = (lastSeatNumber == null) ? 1 : lastSeatNumber + 1; // i have added 1 as one record is deleted from the table using pnr number
                 Integer seatNumberToBeSentInD1 = 0;
                 Integer seatNumberToBeSentInD2 = 0;
@@ -1402,7 +1402,7 @@ public class TicketServiceImpl implements TicketService {
                 Integer totalSeatsInAC2 = seatMap.get("AC2") + totalSeatsInAC1;
                 Integer totalSeatsInAC3 = seatMap.get("AC3") + totalSeatsInAC2;
 
-                Integer lastSeatNumber = this.passengerRepository.findByEndingSeatNumberNativeQuery(ticketsFound.getTrainNumber());
+                Integer lastSeatNumber = this.passengerRepository.findByEndingSeatNumberAndSeatClassNativeQuery(ticketsFound.getTrainNumber(),seatClass);
                 lastSeatNumber = (lastSeatNumber == null) ? 1 : lastSeatNumber + 1; // i have added 1 as one record is deleted from the table using pnr number
 
                 Integer seatNumberToBeSentInAC1 = 0;
