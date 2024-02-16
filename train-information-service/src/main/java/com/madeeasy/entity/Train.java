@@ -24,9 +24,9 @@ public class Train {
     private String trainName;
     @Column(unique = true, length = 30)
     private String trainNumber;
-    @Column(unique = true, length = 30)
+    @Column(nullable = false,length = 30)
     private String startingStation;     // Starting point of the train route
-    @Column(unique = true, length = 30)
+    @Column(nullable = false, length = 30)
     private String endingStation;       // Ending point or destination of the train route
     private String trainDescription; // Description of the train
 

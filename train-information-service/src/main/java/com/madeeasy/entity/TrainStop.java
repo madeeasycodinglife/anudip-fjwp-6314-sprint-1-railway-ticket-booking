@@ -21,7 +21,7 @@ public class TrainStop {
     @Column(unique = true)
     private String stopId;
 
-    @Column(unique = true, nullable = false, length = 50)
+    @Column(nullable = false, length = 50)
     private String stationName;
 
     /**
